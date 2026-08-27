@@ -1,4 +1,4 @@
-package dev.neurs.xpalm_client
+package com.kemolumi.xpalm_client
 
 import android.net.wifi.WifiManager
 import android.net.wifi.WifiManager.MulticastLock
@@ -8,7 +8,7 @@ import io.flutter.plugin.common.MethodChannel
 
 
 open class MainActivity: FlutterActivity() {
-    private val channel: String = "udp.neurs.click/multicast_lock"
+    private val channel: String = "com.kemolumi.xpalm_client/multicast_lock"
     private var mLock: MulticastLock? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {

@@ -111,7 +111,7 @@ class ServersMulticast {
   late Timer sendTask;
 
   MethodChannel mutlcastLock =
-      const MethodChannel("udp.neurs.click/multicast_lock");
+      const MethodChannel("com.kemolumi.xpalm_client/multicast_lock");
 
   bind() async {
     if (Platform.isAndroid) {
