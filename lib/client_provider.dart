@@ -3,6 +3,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:vibration/vibration.dart';
 
 enum KeyAction {
   press(1),
@@ -12,48 +13,54 @@ enum KeyAction {
   final int value;
 }
 
-enum KeyPad {
-  XUSB_GAMEPAD_DPAD_UP(0x0001),
-  XUSB_GAMEPAD_DPAD_DOWN(0x0002),
-  XUSB_GAMEPAD_DPAD_LEFT(0x0004),
-  XUSB_GAMEPAD_DPAD_RIGHT(0x0008),
-  XUSB_GAMEPAD_START(0x0010),
-  XUSB_GAMEPAD_BACK(0x0020),
-  XUSB_GAMEPAD_LEFT_THUMB(0x0040),
-  XUSB_GAMEPAD_RIGHT_THUMB(0x0080),
-  XUSB_GAMEPAD_LEFT_SHOULDER(0x0100),
-  XUSB_GAMEPAD_RIGHT_SHOULDER(0x0200),
-  XUSB_GAMEPAD_GUIDE(0x0400),
-  XUSB_GAMEPAD_A(0x1000),
-  XUSB_GAMEPAD_B(0x2000),
-  XUSB_GAMEPAD_X(0x4000),
-  XUSB_GAMEPAD_Y(0x8000);
+enum ControllerButton {
+  A(0),
+  B(1),
+  Y(2),
+  X(3),
+  LB(4),
+  RB(5),
+  BL(6),
+  BR(7),
+  Start(8),
+  Back(9),
+  Guide(10);
 
-  const KeyPad(this.value);
+  const ControllerButton(this.value);
   final int value;
 }
 
-enum JoystickPosition {
-  left_joystick(0),
-  right_joystick(1);
+enum ControllerTrigger {
+  Left(0),
+  Right(1);
 
-  const JoystickPosition(this.value);
+  const ControllerTrigger(this.value);
   final int value;
 }
 
-enum Trigger {
-  left_trigger(0),
-  right_trigger(1);
+enum ControllerDpad {
+  Up(0, 1),
+  Down(0, -1),
+  Left(1, -1),
+  Right(1, 1);
 
-  const Trigger(this.value);
+  const ControllerDpad(this.value, this.direction);
+  final int value;
+  final int direction;
+}
+
+enum ControllerJoystick {
+  Left(0),
+  Right(1);
+
+  const ControllerJoystick(this.value);
   final int value;
 }
 
 class ClientProvider extends ChangeNotifier {
   bool authorized = false;
   bool connection = false;
-  late RawDatagramSocket udpJoystick;
-  late RawSocket tcpButtons;
+  late RawSocket tcpClient;
   int ping = 0;
   int start = DateTime.now().millisecondsSinceEpoch;
   late InternetAddress destinationIp;
@@ -64,23 +71,25 @@ class ClientProvider extends ChangeNotifier {
     destinationPort = port;
 
     connection = true;
+    authorized = false;
 
-    tcpButtons = await RawSocket.connect(destinationIp, port);
+    tcpClient = await RawSocket.connect(destinationIp, port);
+    tcpClient.setOption(SocketOption.tcpNoDelay, true);
 
-    udpJoystick =
-        await RawDatagramSocket.bind(InternetAddress.anyIPv4, destinationPort);
-    udpJoystick.readEventsEnabled = true;
-
-    processAuthorizeEvents(int key) {
+    authorizeEvent(int key, Uint8List datagram) {
       if (key > 1) return;
       if (key == 1) {
         authorized = true;
         Timer.run(() => notifyListeners());
 
-        Timer.periodic(const Duration(seconds: 2), (_) {
-          start = DateTime.now().millisecondsSinceEpoch;
-          tcpButtons.write([6, 0, 0, 0]);
-        });
+        // Timer.periodic(const Duration(seconds: 2), (timer) {
+        //   if (!connection || !authorized) {
+        //     timer.cancel();
+        //     return;
+        //   }
+        //   start = DateTime.now().millisecondsSinceEpoch;
+        //   tcpClient.write([6]);
+        // });
         return;
       }
       if (key == 0) {
@@ -88,60 +97,85 @@ class ClientProvider extends ChangeNotifier {
       }
     }
 
-    processPingPongEvent(int key) {
-      if (key == 6) {
-        ping = DateTime.now().millisecondsSinceEpoch - start;
-        Timer.run(() => notifyListeners());
-      }
+    pingPongEvent(int key, Uint8List datagram) {
+      if (key != 6) return;
+      ping = DateTime.now().millisecondsSinceEpoch - start;
+      // Timer.run(() => notifyListeners());
     }
 
-    tcpButtons.listen((RawSocketEvent event) {
-      if (event == RawSocketEvent.read) {
-        final datagram = tcpButtons.read();
+    vibrationEvent(int key, Uint8List datagram) {
+      if (key != 2) return;
 
-        if (datagram != null) {
-          final eventKey = datagram[0];
-          processAuthorizeEvents(eventKey);
-          processPingPongEvent(eventKey);
-        }
+      if (datagram[1] == 0) {
+        Vibration.cancel();
+        return;
       }
-    });
 
-    // Request to server.
-    tcpButtons.write([0, 0, 0, 0]);
+      final duration =
+          ByteData.sublistView(datagram, 2, 4).getUint16(0, Endian.big);
+
+      Vibration.vibrate(duration: duration, amplitude: datagram[1]);
+    }
+
+    tcpClient.listen(
+      (data) {
+        if (!(data == RawSocketEvent.read)) return;
+
+        final datagram = tcpClient.read();
+        if (datagram == null) return;
+
+        final eventKey = datagram[0];
+        authorizeEvent(eventKey, datagram);
+        pingPongEvent(eventKey, datagram);
+        vibrationEvent(eventKey, datagram);
+      },
+      onError: (error) {
+        disconnect();
+      },
+      onDone: () {
+        disconnect();
+      },
+      cancelOnError: true,
+    );
   }
 
-  sendKey(KeyAction action, KeyPad key) {
-    tcpButtons.write([2, action.value] + _intToUint8List(key.value));
+  authorize(int code) {
+    if (!connection) return;
+    tcpClient.write([1] + _int16ToUint8List(code));
   }
 
-  sendJoystick(JoystickPosition joystick, int x, int y) {
-    udpJoystick.send(
-        [3, joystick.value] + _intToUint8List(x) + _intToUint8List(y),
-        destinationIp,
-        destinationPort);
+  sendKey(ControllerButton key, KeyAction action) {
+    tcpClient.write([2, key.value, action.value]);
   }
 
-  sendTrigger(Trigger trigger, int value) {
-    tcpButtons.write([4, trigger.value, 0, value]);
+  sendTrigger(ControllerTrigger trigger, int power) {
+    if (!connection) return;
+    tcpClient.write([3, trigger.value, power]);
   }
 
-  sendReset() {
-    tcpButtons.write([5]);
+  sendDpad(ControllerDpad dpad, KeyAction action) {
+    if (!connection) return;
+    tcpClient.write(
+        [4, dpad.value, action == KeyAction.release ? 0 : dpad.direction]);
+  }
+
+  sendJoystick(ControllerJoystick joystick, int x, int y) {
+    if (!connection) return;
+    tcpClient.write(
+      [5, joystick.value] + _int16ToUint8List(x) + _int16ToUint8List(y),
+    );
   }
 
   disconnect() {
-    tcpButtons.write([1]);
-    tcpButtons.close();
-    udpJoystick.close();
     connection = false;
     authorized = false;
+    tcpClient.close();
     Timer.run(() => notifyListeners());
   }
 
-  Uint8List _intToUint8List(int value) {
+  Uint8List _int16ToUint8List(int value) {
     ByteData byteData = ByteData(2);
-    byteData.setInt16(0, value, Endian.little);
+    byteData.setInt16(0, value, Endian.big);
 
     return byteData.buffer.asUint8List();
   }
