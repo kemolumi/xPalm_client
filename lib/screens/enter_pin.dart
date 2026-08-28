@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import '../client_provider.dart';
 import '../screens/interact.dart';
 import 'package:provider/provider.dart';
@@ -15,15 +16,58 @@ class EnterPin extends StatefulWidget {
 }
 
 class _EnterPinState extends State<EnterPin> {
+  TextEditingController code = TextEditingController();
+  ClientProvider? _clientProvider;
+  bool _handled = false;
+
   @override
   void initState() {
+    super.initState();
     Provider.of<ClientProvider>(context, listen: false)
         .connect(widget.ip, widget.port);
-    super.initState();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final provider = context.read<ClientProvider>();
+    if (_clientProvider != provider) {
+      _clientProvider?.removeListener(_onConnectionChange);
+      _clientProvider = provider;
+      _clientProvider!.addListener(_onConnectionChange);
+    }
+  }
+
+  void _onConnectionChange() {
+    if (_handled || !mounted) return;
+
+    if (!_clientProvider!.connection) {
+      _handled = true;
+      Fluttertoast.showToast(
+        msg: "The server closed your connection.",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Theme.of(context).cardColor,
+        textColor: Colors.white,
+        fontSize: 16.0,
+      );
+      Navigator.popUntil(context, (route) => route.isFirst);
+    } else if (_clientProvider!.authorized) {
+      _handled = true;
+      Navigator.of(context).pop();
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (context) => Interact(name: widget.name)),
+      );
+    }
   }
 
   @override
   void dispose() {
+    _clientProvider?.removeListener(_onConnectionChange);
+    if (!_clientProvider!.authorized) {
+      _clientProvider!.disconnect();
+    }
     super.dispose();
   }
 
@@ -31,50 +75,35 @@ class _EnterPinState extends State<EnterPin> {
   Widget build(BuildContext context) {
     return Consumer<ClientProvider>(
       builder: (context, clientProvider, _) {
-        if (clientProvider.authorized) {
-          SchedulerBinding.instance.addPostFrameCallback(
-            (_) {
-              Navigator.popUntil(context, (route) => route.isFirst);
-            },
-          );
-          SchedulerBinding.instance.addPostFrameCallback(
-            (_) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => Interact(name: widget.name),
-                ),
-              );
-            },
-          );
-        }
-        return SizedBox(
-          height: 180,
-          width: double.maxFinite,
-          child: Column(
-            children: [
-              Text(
-                widget.name,
-                style:
-                    const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 10),
-              const Text("Waiting for host to accept..."),
-              OutlinedButton(
-                onPressed: () {
-                  if (clientProvider.connection) {
-                    clientProvider.disconnect();
-                  }
-                  SchedulerBinding.instance.addPostFrameCallback(
-                    (_) {
-                      Navigator.popUntil(context, (route) => route.isFirst);
-                    },
-                  );
-                },
-                child: const Text("Cancel"),
-              ),
+        return AlertDialog(
+          title: Text("Connect to ${widget.name}"),
+          content: TextField(
+            controller: code,
+            textAlign: TextAlign.center,
+            maxLength: 4,
+            keyboardType: TextInputType.number,
+            inputFormatters: <TextInputFormatter>[
+              FilteringTextInputFormatter.digitsOnly,
             ],
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+              labelText: "Authorize code",
+            ),
           ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            FilledButton(
+              child: const Text('Authorize'),
+              onPressed: () {
+                clientProvider.authorize(int.parse(code.text));
+              },
+            ),
+          ],
         );
       },
     );

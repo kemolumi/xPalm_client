@@ -17,6 +17,31 @@ class Interact extends StatefulWidget {
 }
 
 class _InteractState extends State<Interact> {
+  ClientProvider? _clientProvider;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final provider = context.read<ClientProvider>();
+    if (_clientProvider != provider) {
+      _clientProvider?.removeListener(_onConnectionChange);
+      _clientProvider = provider;
+      _clientProvider!.addListener(_onConnectionChange);
+    }
+  }
+
+  void _onConnectionChange() {
+    if (!_clientProvider!.connection && mounted) {
+      Navigator.of(context).pop();
+    }
+  }
+
+  @override
+  void dispose() {
+    _clientProvider?.removeListener(_onConnectionChange);
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     Size screen = MediaQuery.of(context).size;
@@ -31,13 +56,13 @@ class _InteractState extends State<Interact> {
               const Align(
                 alignment: Alignment.centerLeft,
                 child: JoyStickCustom(
-                  position: JoystickPosition.left_joystick,
+                  position: ControllerJoystick.Left,
                 ),
               ),
               const Align(
                 alignment: Alignment.centerRight,
                 child: JoyStickCustom(
-                  position: JoystickPosition.right_joystick,
+                  position: ControllerJoystick.Right,
                   showArea: false,
                   divisionFactor: 5,
                 ),
@@ -47,7 +72,7 @@ class _InteractState extends State<Interact> {
                 child: Padding(
                   padding: EdgeInsets.all(15),
                   child: KeyPadButton(
-                    input: KeyPad.XUSB_GAMEPAD_LEFT_THUMB,
+                    input: ControllerButton.BL,
                     height: 30,
                     width: 30,
                     borderRadius: 15,
@@ -59,7 +84,7 @@ class _InteractState extends State<Interact> {
                 child: Padding(
                   padding: EdgeInsets.all(15),
                   child: KeyPadButton(
-                    input: KeyPad.XUSB_GAMEPAD_RIGHT_THUMB,
+                    input: ControllerButton.BR,
                     height: 30,
                     width: 30,
                     borderRadius: 15,
@@ -73,14 +98,14 @@ class _InteractState extends State<Interact> {
                   KeyPadButton(
                     height: 70,
                     width: 70,
-                    input: Trigger.left_trigger,
+                    input: ControllerTrigger.Left,
                     text: "LT",
                   ),
                   SizedBox(width: 16),
                   KeyPadButton(
                     height: 70,
                     width: 70,
-                    input: KeyPad.XUSB_GAMEPAD_LEFT_SHOULDER,
+                    input: ControllerButton.LB,
                     text: "LB",
                   ),
                 ]),
@@ -92,14 +117,14 @@ class _InteractState extends State<Interact> {
                   KeyPadButton(
                     height: 70,
                     width: 70,
-                    input: Trigger.right_trigger,
+                    input: ControllerTrigger.Right,
                     text: "RT",
                   ),
                   SizedBox(width: 16),
                   KeyPadButton(
                     height: 70,
                     width: 70,
-                    input: KeyPad.XUSB_GAMEPAD_RIGHT_SHOULDER,
+                    input: ControllerButton.RB,
                     text: "RB",
                   )
                 ]),
@@ -115,22 +140,18 @@ class _InteractState extends State<Interact> {
                         KeyPadButton(
                           height: 32,
                           width: 32,
-                          input: KeyPad.XUSB_GAMEPAD_BACK,
+                          input: ControllerButton.Back,
                           icon: Icon(
                             Icons.web_asset,
                           ),
                         ),
                         SizedBox(width: 32),
-                        Image(
-                          image: AssetImage("assets/logo.png"),
-                          width: 60,
-                          height: 60,
-                        ),
+                        GuideButton(),
                         SizedBox(width: 32),
                         KeyPadButton(
                           height: 32,
                           width: 32,
-                          input: KeyPad.XUSB_GAMEPAD_START,
+                          input: ControllerButton.Start,
                           icon: Icon(
                             Icons.menu,
                           ),
@@ -147,28 +168,28 @@ class _InteractState extends State<Interact> {
                     KeyPadButton(
                       height: 60,
                       width: 60,
-                      input: KeyPad.XUSB_GAMEPAD_DPAD_UP,
+                      input: ControllerDpad.Up,
                       text: "↑",
                     ),
                     SizedBox(width: 12),
                     KeyPadButton(
                       height: 60,
                       width: 60,
-                      input: KeyPad.XUSB_GAMEPAD_DPAD_LEFT,
+                      input: ControllerDpad.Left,
                       text: "←",
                     ),
                     SizedBox(width: 12),
                     KeyPadButton(
                       height: 60,
                       width: 60,
-                      input: KeyPad.XUSB_GAMEPAD_DPAD_RIGHT,
+                      input: ControllerDpad.Right,
                       text: "→",
                     ),
                     SizedBox(width: 12),
                     KeyPadButton(
                       height: 60,
                       width: 60,
-                      input: KeyPad.XUSB_GAMEPAD_DPAD_DOWN,
+                      input: ControllerDpad.Down,
                       text: "↓",
                     ),
                   ],
@@ -182,7 +203,7 @@ class _InteractState extends State<Interact> {
                     height: screen.height / 3,
                     width: screen.height / 3,
                     borderRadius: screen.height / 3,
-                    input: KeyPad.XUSB_GAMEPAD_A,
+                    input: ControllerButton.A,
                     color: Colors.green,
                     strength: 15,
                     text: "A",
@@ -196,7 +217,7 @@ class _InteractState extends State<Interact> {
                   height: 70,
                   width: 70,
                   borderRadius: 35,
-                  input: KeyPad.XUSB_GAMEPAD_B,
+                  input: ControllerButton.B,
                   color: Colors.red,
                   text: "B",
                 ),
@@ -208,7 +229,7 @@ class _InteractState extends State<Interact> {
                   height: 70,
                   width: 70,
                   borderRadius: 35,
-                  input: KeyPad.XUSB_GAMEPAD_Y,
+                  input: ControllerButton.Y,
                   color: Colors.yellow,
                   text: "Y",
                 ),
@@ -220,7 +241,7 @@ class _InteractState extends State<Interact> {
                   height: 70,
                   width: 70,
                   borderRadius: 35,
-                  input: KeyPad.XUSB_GAMEPAD_X,
+                  input: ControllerButton.X,
                   color: Colors.blue,
                   text: "X",
                 ),
@@ -238,7 +259,7 @@ class _InteractState extends State<Interact> {
 }
 
 class JoyStickCustom extends StatefulWidget {
-  final JoystickPosition position;
+  final ControllerJoystick position;
   final bool showArea;
   final double divisionFactor;
 
@@ -280,7 +301,7 @@ class _JoyStickCustomState extends State<JoyStickCustom> {
                   }
 
                   clientProvider.sendJoystick(widget.position,
-                      (currentX * 32767).floor(), (-currentY * 32767).floor());
+                      (currentX * 32767).floor(), (currentY * 32767).floor());
 
                   _isOnCooldown = true;
                   Future.delayed(const Duration(milliseconds: 15),
@@ -304,13 +325,13 @@ class _JoyStickCustomState extends State<JoyStickCustom> {
                               beginPan!.dy -
                               screen.height / (widget.divisionFactor * 2)
                           : screen.height / 15,
-                      left: widget.position == JoystickPosition.left_joystick
+                      left: widget.position == ControllerJoystick.Left
                           ? beginPan != null
                               ? beginPan!.dx -
                                   screen.height / (widget.divisionFactor * 2)
                               : screen.height / 15
                           : null,
-                      right: widget.position == JoystickPosition.right_joystick
+                      right: widget.position == ControllerJoystick.Right
                           ? beginPan != null
                               ? -beginPan!.dx +
                                   screen.height / widget.divisionFactor * 2
@@ -331,6 +352,36 @@ class _JoyStickCustomState extends State<JoyStickCustom> {
                 ),
               ),
             ));
+  }
+}
+
+class GuideButton extends StatelessWidget {
+  const GuideButton({
+    super.key,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<ClientProvider>(
+      builder: (context, clientProvider, _) => Listener(
+        onPointerDown: (_) {
+          clientProvider.sendKey(ControllerButton.Guide, KeyAction.press);
+          Vibration.vibrate(duration: 250);
+        },
+        onPointerUp: (_) => Provider.of<ClientProvider>(
+          context,
+          listen: false,
+        ).sendKey(
+          ControllerButton.Guide,
+          KeyAction.release,
+        ),
+        child: const Image(
+          image: AssetImage("assets/logo.png"),
+          width: 60,
+          height: 60,
+        ),
+      ),
+    );
   }
 }
 
@@ -362,14 +413,18 @@ class KeyPadButton extends StatelessWidget {
     return Consumer<ClientProvider>(
       builder: (context, clientProvider, _) => Listener(
         onPointerDown: (_) {
-          input.runtimeType == KeyPad
-              ? clientProvider.sendKey(KeyAction.press, input)
-              : clientProvider.sendTrigger(input, 1);
+          input.runtimeType == ControllerButton
+              ? clientProvider.sendKey(input, KeyAction.press)
+              : input.runtimeType == ControllerDpad
+                  ? clientProvider.sendDpad(input, KeyAction.press)
+                  : clientProvider.sendTrigger(input, 255);
           Vibration.vibrate(duration: strength);
         },
-        onPointerUp: (_) => input.runtimeType == KeyPad
-            ? clientProvider.sendKey(KeyAction.release, input)
-            : clientProvider.sendTrigger(input, 0),
+        onPointerUp: (_) => input.runtimeType == ControllerButton
+            ? clientProvider.sendKey(input, KeyAction.release)
+            : input.runtimeType == ControllerDpad
+                ? clientProvider.sendDpad(input, KeyAction.release)
+                : clientProvider.sendTrigger(input, 0),
         child: Container(
           height: height,
           width: width,
@@ -403,7 +458,7 @@ class PingDisplay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Consumer<ClientProvider>(
-        builder: (context, clientProvider, _) =>
-            Text("${clientProvider.ping}ms"));
+      builder: (context, clientProvider, _) => Text("${clientProvider.ping}ms"),
+    );
   }
 }

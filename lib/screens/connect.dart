@@ -72,10 +72,8 @@ class _ConnectState extends State<Connect> {
         child: ValueListenableBuilder(
           builder: (context, sv, __) => ListView.builder(
             itemBuilder: (context, index) => InkWell(
-              onTap: () => showModalBottomSheet(
-                showDragHandle: true,
-                isDismissible: false,
-                enableDrag: false,
+              onTap: () => showDialog(
+                barrierDismissible: false,
                 context: context,
                 builder: (context) => PopScope(
                   canPop: false,

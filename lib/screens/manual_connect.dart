@@ -30,20 +30,26 @@ class _ManualConnectState extends State<ManualConnect> {
                         const SizedBox(height: 10),
                         Row(children: [
                           Expanded(
-                              flex: 2,
-                              child: TextFormField(
-                                  onChanged: (t) => ip = t,
-                                  decoration: const InputDecoration(
-                                      border: OutlineInputBorder(),
-                                      labelText: "IP Address"))),
+                            flex: 2,
+                            child: TextFormField(
+                              onChanged: (t) => ip = t,
+                              decoration: const InputDecoration(
+                                border: OutlineInputBorder(),
+                                labelText: "IP Address",
+                              ),
+                            ),
+                          ),
                           const SizedBox(width: 5),
                           Expanded(
-                              flex: 1,
-                              child: TextFormField(
-                                  onChanged: (t) => port = t,
-                                  decoration: const InputDecoration(
-                                      border: OutlineInputBorder(),
-                                      labelText: "Port")))
+                            flex: 1,
+                            child: TextFormField(
+                              onChanged: (t) => port = t,
+                              decoration: const InputDecoration(
+                                border: OutlineInputBorder(),
+                                labelText: "Port",
+                              ),
+                            ),
+                          )
                         ]),
                         const SizedBox(height: 10),
                         Row(
