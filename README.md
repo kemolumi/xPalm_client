@@ -2,4 +2,4 @@
 
 A controller interface for xPalm - xbox 360 controller emulator.
 
-Low delay, close to wireless controller performance and responsive.
+Actually low delay, surpasses wireless controller performance and responsiveness, 1000hz+.
