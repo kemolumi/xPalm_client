@@ -76,58 +76,55 @@ class ClientProvider extends ChangeNotifier {
     tcpClient = await RawSocket.connect(destinationIp, port);
     tcpClient.setOption(SocketOption.tcpNoDelay, true);
 
-    authorizeEvent(int key, Uint8List datagram) {
-      if (key > 1) return;
-      if (key == 1) {
-        authorized = true;
-        Timer.run(() => notifyListeners());
+    authorizedEvent() {
+      authorized = true;
+      Timer.run(() => notifyListeners());
 
-        Timer.periodic(const Duration(seconds: 2), (timer) {
-          if (!connection || !authorized) {
-            timer.cancel();
-            return;
-          }
-          start = DateTime.now().millisecondsSinceEpoch;
-          tcpClient.write([6]);
-        });
-        return;
-      }
-      if (key == 0) {
-        disconnect();
-      }
+      Timer.periodic(const Duration(seconds: 2), (timer) {
+        if (!connection || !authorized) {
+          timer.cancel();
+          return;
+        }
+        start = DateTime.now().millisecondsSinceEpoch;
+        tcpClient.write([6]);
+      });
     }
 
-    pingPongEvent(int key, Uint8List datagram) {
-      if (key != 6) return;
+    pingPongEvent() {
       ping = DateTime.now().millisecondsSinceEpoch - start;
       Timer.run(() => notifyListeners());
     }
 
-    vibrationEvent(int key, Uint8List datagram) {
-      if (key != 2) return;
-
-      if (datagram[1] == 0) {
+    vibrationEvent() {
+      final data = tcpClient.read(3);
+      if (data == null || data[0] == 0) {
         Vibration.cancel();
         return;
       }
 
       final duration =
-          ByteData.sublistView(datagram, 2, 4).getUint16(0, Endian.big);
+          ByteData.sublistView(data, 1, 3).getUint16(0, Endian.big);
 
-      Vibration.vibrate(duration: duration, amplitude: datagram[1]);
+      Vibration.vibrate(duration: duration, amplitude: data[0]);
     }
 
     tcpClient.listen(
-      (data) {
-        if (!(data == RawSocketEvent.read)) return;
+      (event) {
+        if (!(event == RawSocketEvent.read)) return;
 
-        final datagram = tcpClient.read();
-        if (datagram == null) return;
+        final flag = tcpClient.read(1);
+        if (flag == null) return;
 
-        final eventKey = datagram[0];
-        authorizeEvent(eventKey, datagram);
-        pingPongEvent(eventKey, datagram);
-        vibrationEvent(eventKey, datagram);
+        switch (flag[0]) {
+          case 0:
+            disconnect();
+          case 1:
+            authorizedEvent();
+          case 2:
+            vibrationEvent();
+          case 6:
+            pingPongEvent();
+        }
       },
       onError: (error) {
         disconnect();
