@@ -82,14 +82,14 @@ class ClientProvider extends ChangeNotifier {
         authorized = true;
         Timer.run(() => notifyListeners());
 
-        // Timer.periodic(const Duration(seconds: 2), (timer) {
-        //   if (!connection || !authorized) {
-        //     timer.cancel();
-        //     return;
-        //   }
-        //   start = DateTime.now().millisecondsSinceEpoch;
-        //   tcpClient.write([6]);
-        // });
+        Timer.periodic(const Duration(seconds: 2), (timer) {
+          if (!connection || !authorized) {
+            timer.cancel();
+            return;
+          }
+          start = DateTime.now().millisecondsSinceEpoch;
+          tcpClient.write([6]);
+        });
         return;
       }
       if (key == 0) {
@@ -100,7 +100,7 @@ class ClientProvider extends ChangeNotifier {
     pingPongEvent(int key, Uint8List datagram) {
       if (key != 6) return;
       ping = DateTime.now().millisecondsSinceEpoch - start;
-      // Timer.run(() => notifyListeners());
+      Timer.run(() => notifyListeners());
     }
 
     vibrationEvent(int key, Uint8List datagram) {
