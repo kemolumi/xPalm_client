@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:vibration/vibration.dart';
 import '../client_provider.dart';
 import 'package:provider/provider.dart';
@@ -18,6 +19,15 @@ class Interact extends StatefulWidget {
 
 class _InteractState extends State<Interact> {
   ClientProvider? _clientProvider;
+
+  @override
+  void initState() {
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+    super.initState();
+  }
 
   @override
   void didChangeDependencies() {
@@ -38,6 +48,12 @@ class _InteractState extends State<Interact> {
 
   @override
   void dispose() {
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeRight,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
     _clientProvider?.removeListener(_onConnectionChange);
     super.dispose();
   }
@@ -366,7 +382,7 @@ class GuideButton extends StatelessWidget {
       builder: (context, clientProvider, _) => Listener(
         onPointerDown: (_) {
           clientProvider.sendKey(ControllerButton.Guide, KeyAction.press);
-          Vibration.vibrate(duration: 250);
+          Vibration.vibrate(duration: 5);
         },
         onPointerUp: (_) => Provider.of<ClientProvider>(
           context,
