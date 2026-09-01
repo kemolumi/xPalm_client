@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:collection/collection.dart';
+import 'package:flutter_multicast_lock/flutter_multicast_lock.dart';
 import 'package:provider/provider.dart';
 import '../client_provider.dart';
 import 'manual_connect.dart';
@@ -108,13 +109,10 @@ class ServersMulticast {
   ListNotifier serversList = ListNotifier();
   late Timer sendTask;
 
-  MethodChannel mutlcastLock =
-      const MethodChannel("com.kemolumi.xpalm_client/multicast_lock");
+  final flutterMulticastLock = FlutterMulticastLock();
 
   bind() async {
-    if (Platform.isAndroid) {
-      await mutlcastLock.invokeMethod<bool>("acquire");
-    }
+    await flutterMulticastLock.acquireMulticastLock();
 
     socket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, port);
     socket.joinMulticast(multicastGroup);
@@ -164,9 +162,7 @@ class ServersMulticast {
     sendTask.cancel();
     serversList.clear();
 
-    if (Platform.isAndroid) {
-      await mutlcastLock.invokeMethod<bool>("release");
-    }
+    await flutterMulticastLock.releaseMulticastLock();
     socket.close();
   }
 }

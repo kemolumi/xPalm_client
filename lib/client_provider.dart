@@ -61,6 +61,7 @@ class ClientProvider extends ChangeNotifier {
   bool authorized = false;
   bool connection = false;
   late RawSocket tcpClient;
+  late RawDatagramSocket udpClient;
   int ping = 0;
   int start = DateTime.now().millisecondsSinceEpoch;
   late InternetAddress destinationIp;
@@ -75,6 +76,9 @@ class ClientProvider extends ChangeNotifier {
 
     tcpClient = await RawSocket.connect(destinationIp, port);
     tcpClient.setOption(SocketOption.tcpNoDelay, true);
+
+    udpClient =
+        await RawDatagramSocket.bind(InternetAddress.anyIPv4, tcpClient.port);
 
     authorizedEvent() {
       authorized = true;
@@ -158,8 +162,10 @@ class ClientProvider extends ChangeNotifier {
 
   sendJoystick(ControllerJoystick joystick, int x, int y) {
     if (!connection) return;
-    tcpClient.write(
+    udpClient.send(
       [5, joystick.value] + _int16ToUint8List(x) + _int16ToUint8List(y),
+      destinationIp,
+      destinationPort,
     );
   }
 
@@ -167,6 +173,7 @@ class ClientProvider extends ChangeNotifier {
     connection = false;
     authorized = false;
     tcpClient.close();
+    udpClient.close();
     Timer.run(() => notifyListeners());
   }
 
