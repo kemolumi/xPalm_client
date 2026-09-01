@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -79,7 +80,7 @@ class _ConnectState extends State<Connect> {
                   canPop: false,
                   child: EnterPin(
                     ip: sv[index].ip.address,
-                    port: 45784,
+                    port: sv[index].port,
                     name: sv[index].name,
                   ),
                 ),
@@ -87,7 +88,7 @@ class _ConnectState extends State<Connect> {
               child: ListTile(
                 leading: const Icon(Icons.laptop_windows),
                 title: Text(sv[index].name),
-                subtitle: Text(sv[index].ip.address),
+                subtitle: Text("${sv[index].ip.address}:${sv[index].port}"),
                 trailing: const Icon(Icons.link),
               ),
             ),
@@ -127,14 +128,23 @@ class ServersMulticast {
           if (datagram != null && socket.address != datagram.address) {
             final message = datagram.data;
             if (message.first == 1) {
-              final serverName = String.fromCharCodes(message.sublist(1));
-              final serverInfo =
-                  ServerInfo(name: serverName, ip: datagram.address);
+              final serverName = String.fromCharCodes(message.sublist(3));
+              final serverInfo = ServerInfo(
+                name: serverName,
+                ip: datagram.address,
+                port: ByteData.sublistView(message.sublist(1, 3)).getUint16(0),
+              );
               if (serversList.value.firstWhereOrNull((element) =>
                       element.ip.address == serverInfo.ip.address) ==
                   null) {
-                serversList
-                    .add(ServerInfo(name: serverName, ip: datagram.address));
+                serversList.add(
+                  ServerInfo(
+                    name: serverName,
+                    ip: datagram.address,
+                    port: ByteData.sublistView(message.sublist(1, 3))
+                        .getUint16(0),
+                  ),
+                );
               }
             }
           }
@@ -165,8 +175,9 @@ class ServersMulticast {
 class ServerInfo {
   final String name;
   final InternetAddress ip;
+  final int port;
 
-  ServerInfo({required this.name, required this.ip});
+  ServerInfo({required this.name, required this.ip, required this.port});
 }
 
 class ListNotifier extends ValueNotifier<List<ServerInfo>> {
