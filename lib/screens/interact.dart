@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:vibration/vibration.dart';
 import '../client_provider.dart';
 import 'package:provider/provider.dart';
 
@@ -380,7 +379,7 @@ class GuideButton extends StatelessWidget {
       builder: (context, clientProvider, _) => Listener(
         onPointerDown: (_) {
           clientProvider.sendKey(ControllerButton.Guide, KeyAction.press);
-          Vibration.vibrate(duration: 5);
+          HapticFeedback.lightImpact();
         },
         onPointerUp: (_) => Provider.of<ClientProvider>(
           context,
@@ -432,7 +431,7 @@ class KeyPadButton extends StatelessWidget {
               : input.runtimeType == ControllerDpad
                   ? clientProvider.sendDpad(input, KeyAction.press)
                   : clientProvider.sendTrigger(input, 255);
-          Vibration.vibrate(duration: strength);
+          HapticFeedback.lightImpact();
         },
         onPointerUp: (_) => input.runtimeType == ControllerButton
             ? clientProvider.sendKey(input, KeyAction.release)

@@ -80,7 +80,7 @@ class ClientProvider extends ChangeNotifier {
       authorized = true;
       Timer.run(() => notifyListeners());
 
-      Timer.periodic(const Duration(seconds: 2), (timer) {
+      Timer.periodic(const Duration(seconds: 1), (timer) {
         if (!connection || !authorized) {
           timer.cancel();
           return;
